@@ -25,7 +25,7 @@ const server = http.createServer((req, res) => {
   }
 
   if (req.method === 'GET') {
-    fs.readFile(`./public${reqURL}`, 'UTF-8', function(err, data) {
+    fs.readFile(`./public${req.url}`, 'UTF-8', function(err, data) {
       res.writeHead(200, { 'Content-Type': 'text/html', 'Content-Length': data.length });
       res.write(data);
       res.end();
@@ -37,7 +37,6 @@ const server = http.createServer((req, res) => {
     req.on('data', (chunk) => {
       body += chunk.toString(); // convert Buffer to string
       let bodyObject = qs.decode(body);
-
       let bodyKeys = Object.keys(bodyObject);
       let bodyValues = Object.values(bodyObject);
 
@@ -76,17 +75,13 @@ const server = http.createServer((req, res) => {
         let listOfFiles = '';
 
         fs.readdir('./public/', (err, files) => {
-          console.log(files);
           files.forEach((file) => {
-            console.log(file);
             let fileTitle = file.charAt(0).toUpperCase() + file.slice(1);
-            console.log(fileTitle);
             if (!existingFiles.includes(file)) {
               listOfFiles += `
     <li>
       <a href="/${file}.html">${fileTitle}</a>
     </li>`;
-              console.log(listOfFiles);
             }
 
             if (err) {
@@ -125,13 +120,69 @@ const server = http.createServer((req, res) => {
       }
     });
     req.on('end', () => {
-      console.log(qs.decode(body));
+      res.writeHead(200, { 'Content-Type': 'application/JSON' });
       res.end('{ "success" : true }');
     });
   } else {
     server.on('clientError', (err, socket) => {
       socket.end('HTTP/1.1 400 Bad Request\r\n\r\n');
     });
+  }
+  if (req.method === 'PUT') {
+    fs.access(`./public/${req.url.slice(1)}`, fs.constants.F_OK | fs.constants.W_OK, (err) => {
+      if (err) {
+        console.error(`${req.url.slice(1)} ${err.code === 'ENOENT' ? 'does not exist' : 'is read-only'}`);
+        res.writeHead(500, { 'Content-Type': 'application/json' });
+        res.end('{ "error" : "resource /carbon.html does not exist" }');
+      } else {
+        console.log(`${req.url.slice(1)} exists, and it is writable`);
+
+        let body = '';
+        req.on('data', (chunk) => {
+          body += chunk.toString();
+
+          let bodyObject = qs.decode(body);
+          let bodyKeys = Object.keys(bodyObject);
+          let bodyValues = Object.values(bodyObject);
+
+          if (
+            bodyKeys[0] === formData[0] &&
+            bodyKeys[1] === formData[1] &&
+            bodyKeys[2] === formData[2] &&
+            bodyKeys[3] === formData[3]
+          ) {
+            elementNameReceived = bodyValues[0];
+            elementSymbolReceived = bodyValues[1];
+            elementAtomicNumberReceived = bodyValues[2];
+            elementDescriptionReceived = bodyValues[3];
+            fileName = elementNameReceived.toLowerCase();
+
+            let elementTemplate = `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>The Elements - ${elementNameReceived}</title>
+  <link rel="stylesheet" href="/css/styles.css">
+</head>
+<body>
+  <h1>${elementNameReceived}</h1>
+  <h2>${elementSymbolReceived}</h2>
+  <h3>Atomic number ${elementAtomicNumberReceived}</h3>
+  <p>${elementDescriptionReceived}</p>
+  <p><a href="/">back</a></p>
+</body>`;
+
+            fs.writeFile(`./public/${fileName}.html`, elementTemplate, (err) => {
+              if (err) throw err;
+              console.log('The file has been saved!');
+              res.writeHead(200, { 'Content-Type': 'application/json'});
+              res.end('{ "success" : true }');
+            });
+          }
+        });
+      }
+    });
+
   }
 });
 
