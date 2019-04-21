@@ -5,6 +5,7 @@ const fs = require('fs');
 const qs = require('querystring');
 
 const formData = ['elementName', 'elementSymbol', 'elementAtomicNumber', 'elementDescription'];
+let existingFiles = ['css', '404.html', 'index.html', '.keep'];
 
 let elementNameReceived = '';
 let elementSymbolReceived = '';
@@ -72,21 +73,51 @@ const server = http.createServer((req, res) => {
           console.log('The file has been saved!');
         });
 
-        let indexAppend = `    <li>
-      <a href="/${fileName}.html">${elementNameReceived}</a>
-    </li>
+        let listOfFiles = '';
+
+        fs.readdir('./public/', (err, files) => {
+          console.log(files);
+          files.forEach((file) => {
+            console.log(file);
+            let fileTitle = file.charAt(0).toUpperCase() + file.slice(1);
+            console.log(fileTitle);
+            if (!existingFiles.includes(file)) {
+              listOfFiles += `
+    <li>
+      <a href="/${file}.html">${fileTitle}</a>
+    </li>`;
+              console.log(listOfFiles);
+            }
+
+            if (err) {
+              res.send('[empty]');
+              return;
+            }
+          });
+
+          let updateHTML = `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>The Elements</title>
+  <link rel="stylesheet" href="/css/styles.css">
+</head>
+<body>
+  <h1>The Elements</h1>
+  <h2>These are all the known elements.</h2>
+  <h3>These are 2</h3>
+  <ol>${listOfFiles}
   </ol>
 </body>
 </html>`;
 
-        let indexWriteStream = fs.createWriteStream('./public/index.html', { flags: 'a', start: 380 });
-        indexWriteStream.write(indexAppend);
+          let indexWriteStream = fs.createWriteStream('./public/index.html');
+          indexWriteStream.write(updateHTML);
 
-        indexWriteStream.on('finish', () => {
-          console.log('wrote all data to file');
+          indexWriteStream.on('finish', () => {
+            console.log('wrote all data to file');
+          });
         });
-
-        indexWriteStream.end();
       } else {
         server.on('clientError', (err, socket) => {
           socket.end('HTTP/1.1 400 Bad Request\r\n\r\n');
