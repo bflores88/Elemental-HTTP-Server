@@ -17,7 +17,7 @@ const server = http.createServer((req, res) => {
   let reqURL = '/index.html';
 
   if (req.url !== '/') {
-    if (fs.existsSync(`/public${req.url}`)) {
+    if (fs.existsSync(`./public${req.url}`)) {
       reqURL = req.url;
     } else {
       reqURL = '/404.html';
@@ -25,14 +25,19 @@ const server = http.createServer((req, res) => {
   }
 
   if (req.method === 'GET') {
-    fs.readFile(`./public${req.url}`, 'UTF-8', function(err, data) {
+    fs.readFile(`./public${reqURL}`, 'UTF-8', function(err, data) {
       res.writeHead(200, { 'Content-Type': 'text/html', 'Content-Length': data.length });
       res.write(data);
       res.end();
     });
   }
 
-  if (req.method === 'POST' && req.url === '/elements') {
+  if (req.method === 'POST') {
+    if (req.url !== '/elements') {
+      res.writeHead(400, { 'Content-Type': 'text/html' });
+      res.end(`invalid request URL`);
+    }
+
     let body = '';
     req.on('data', (chunk) => {
       body += chunk.toString(); // convert Buffer to string
@@ -73,11 +78,13 @@ const server = http.createServer((req, res) => {
         });
 
         let listOfFiles = '';
+        let counter = 0;
 
         fs.readdir('./public/', (err, files) => {
           files.forEach((file) => {
             let fileTitle = file.charAt(0).toUpperCase() + file.slice(1);
             if (!existingFiles.includes(file)) {
+              counter++;
               listOfFiles += `
     <li>
       <a href="/${file}.html">${fileTitle}</a>
@@ -100,7 +107,7 @@ const server = http.createServer((req, res) => {
 <body>
   <h1>The Elements</h1>
   <h2>These are all the known elements.</h2>
-  <h3>These are 2</h3>
+  <h3>These are ${counter}</h3>
   <ol>${listOfFiles}
   </ol>
 </body>
@@ -128,12 +135,13 @@ const server = http.createServer((req, res) => {
       socket.end('HTTP/1.1 400 Bad Request\r\n\r\n');
     });
   }
+
   if (req.method === 'PUT') {
     fs.access(`./public/${req.url.slice(1)}`, fs.constants.F_OK | fs.constants.W_OK, (err) => {
       if (err) {
         console.error(`${req.url.slice(1)} ${err.code === 'ENOENT' ? 'does not exist' : 'is read-only'}`);
         res.writeHead(500, { 'Content-Type': 'application/json' });
-        res.end('{ "error" : "resource /carbon.html does not exist" }');
+        res.end(`{ "error" : "resource ${req.url} does not exist }`);
       } else {
         console.log(`${req.url.slice(1)} exists, and it is writable`);
 
@@ -175,15 +183,79 @@ const server = http.createServer((req, res) => {
             fs.writeFile(`./public/${fileName}.html`, elementTemplate, (err) => {
               if (err) throw err;
               console.log('The file has been saved!');
-              res.writeHead(200, { 'Content-Type': 'application/json'});
+              res.writeHead(200, { 'Content-Type': 'application/json' });
               res.end('{ "success" : true }');
             });
           }
         });
       }
     });
-
   }
+
+  if (req.method === 'DELETE') {
+    if (fs.existsSync(`./public${req.url}`)) {
+      fs.unlink(`./public${req.url}`, function(err) {
+        if (err) throw err;
+        console.log('File deleted!');
+      });
+
+      let listOfFiles = '';
+      let counter = 0;
+
+      fs.readdir('./public/', (err, files) => {
+        files.forEach((file) => {
+          console.log(file);
+          let fileTitle = file.charAt(0).toUpperCase() + file.slice(1);
+          if (!existingFiles.includes(file)) {
+            counter++;
+            listOfFiles += `
+    <li>
+      <a href="/${file}.html">${fileTitle}</a>
+    </li>`
+          
+          }
+          console.log(listOfFiles);
+
+          let updateHTML = `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>The Elements</title>
+  <link rel="stylesheet" href="/css/styles.css">
+</head>
+<body>
+  <h1>The Elements</h1>
+  <h2>These are all the known elements.</h2>
+  <h3>These are ${counter}</h3>
+  <ol>${listOfFiles}
+  </ol>
+</body>
+</html>`;
+
+      let indexWriteStream = fs.createWriteStream('./public/index.html');
+      indexWriteStream.write(updateHTML);
+
+      indexWriteStream.on('finish', () => {
+        console.log('updated /index.html file');
+      });
+
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(`{ "success" : true }`);
+
+          if (err) {
+            res.send('[empty]');
+            return;
+          }
+        });
+      });
+
+
+    } else {
+      res.writeHead(500, { 'Content-Type': 'application/json' });
+      res.end(`{ "error" : "resource ${req.url} does not exist }`);
+    }
+  }
+  //don't write below this line
 });
 
 server.on('clientError', (err, socket) => {
