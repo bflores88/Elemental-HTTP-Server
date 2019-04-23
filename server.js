@@ -20,10 +20,16 @@ const server = http.createServer((req, res) => {
   let reqURL = '/index.html';
 
   if (req.url !== '/') {
-    if (fs.existsSync(`./public${req.url}`)) {
-      reqURL = req.url;
-    } else {
+    let currentFiles = [];
+    fs.readdir('./public/', (err, files) => {
+      if (err) throw err;
+      currentFiles = files;
+    });
+
+    if (currentFiles.indexOf(req.url) === -1) {
       reqURL = '/404.html';
+    } else {
+      reqURL = req.url;
     }
   }
 
@@ -33,6 +39,7 @@ const server = http.createServer((req, res) => {
       res.writeHead(200, { 'Content-Type': 'text/html', 'Content-Length': data.length });
       res.write(data);
       res.end();
+      return;
     });
   }
 
