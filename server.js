@@ -115,51 +115,51 @@ const server = http.createServer((req, res) => {
 
         fs.writeFile(`./public/${fileName}.html`, elementTemplate, (err) => {
           if (err) throw err;
+
+          let listOfFiles = '';
+          let counter = 0;
+
+          fs.readdir('./public/', (err, files) => {
+            files.forEach((file) => {
+              let fileTitle = file.charAt(0).toUpperCase() + file.slice(1);
+              if (!existingFiles.includes(file)) {
+                counter++;
+                listOfFiles += `
+      <li>
+        <a href="/${file}.html">${fileTitle}</a>
+      </li>`;
+              }
+
+              if (err) {
+                res.send('[empty]');
+                return;
+              }
+            });
+
+            let updateHTML = `<!DOCTYPE html>
+  <html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <title>The Elements</title>
+    <link rel="stylesheet" href="/css/styles.css">
+  </head>
+  <body>
+    <h1>The Elements</h1>
+    <h2>These are all the known elements.</h2>
+    <h3>These are ${counter}</h3>
+    <ol>${listOfFiles}
+    </ol>
+  </body>
+  </html>`;
+
+            let indexWriteStream = fs.createWriteStream('./public/index.html');
+            indexWriteStream.write(updateHTML);
+
+            indexWriteStream.on('finish', () => {
+              console.log('wrote all data to file');
+            });
+          });
           console.log('The file has been saved!');
-        });
-
-        let listOfFiles = '';
-        let counter = 0;
-
-        fs.readdir('./public/', (err, files) => {
-          files.forEach((file) => {
-            let fileTitle = file.charAt(0).toUpperCase() + file.slice(1);
-            if (!existingFiles.includes(file)) {
-              counter++;
-              listOfFiles += `
-    <li>
-      <a href="/${file}.html">${fileTitle}</a>
-    </li>`;
-            }
-
-            if (err) {
-              res.send('[empty]');
-              return;
-            }
-          });
-
-          let updateHTML = `<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <title>The Elements</title>
-  <link rel="stylesheet" href="/css/styles.css">
-</head>
-<body>
-  <h1>The Elements</h1>
-  <h2>These are all the known elements.</h2>
-  <h3>These are ${counter}</h3>
-  <ol>${listOfFiles}
-  </ol>
-</body>
-</html>`;
-
-          let indexWriteStream = fs.createWriteStream('./public/index.html');
-          indexWriteStream.write(updateHTML);
-
-          indexWriteStream.on('finish', () => {
-            console.log('wrote all data to file');
-          });
         });
       } else {
         server.on('clientError', (err, socket) => {
