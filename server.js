@@ -19,6 +19,7 @@ let fileName = '';
 const server = http.createServer((req, res) => {
   let reqURL = '/index.html';
 
+  //check if requested URL exists in current files
   if (req.url !== '/') {
     let currentFiles = [];
     fs.readdir('./public/', (err, files) => {
@@ -232,7 +233,14 @@ const server = http.createServer((req, res) => {
   }
 
   if (req.method === 'DELETE') {
-    if (fs.existsSync(`./public${req.url}`)) {
+    let checkFileExists = [];
+
+    fs.readdir('./public/', (err, files) => {
+      if (err) throw err;
+      checkFileExists = files;
+    });
+
+    if (checkFileExists.indexOf(req.url)) {
       fs.unlink(`./public${req.url}`, function(err) {
         if (err) throw err;
         console.log('File deleted!');
