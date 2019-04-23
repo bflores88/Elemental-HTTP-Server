@@ -4,7 +4,10 @@ const http = require('http');
 const fs = require('fs');
 const qs = require('querystring');
 
-const formData = ['elementName', 'elementSymbol', 'elementAtomicNumber', 'elementDescription'];
+let authenticationObject = {
+  something: 'imadethisup',
+}
+
 let existingFiles = ['css', '404.html', 'index.html', '.keep'];
 
 let elementNameReceived = '';
@@ -26,35 +29,65 @@ const server = http.createServer((req, res) => {
 
   if (req.method === 'GET') {
     fs.readFile(`./public${reqURL}`, 'UTF-8', function(err, data) {
+      if (err) throw err;
       res.writeHead(200, { 'Content-Type': 'text/html', 'Content-Length': data.length });
       res.write(data);
       res.end();
     });
   }
 
+  if(req.method === 'POST' || req.method === 'PUT' || req.method === 'DELETE'){
+    if(req.headers.authorization === undefined){
+      res.writeHead(401, { 'WWW-Authenticate': 'Basic realm="Secure Area"' });
+      res.end(`<html><body>Not Authorized</body></html>`);
+      return;
+    } else {
+      let authHeader = req.headers.authorization;
+      let findSpace = authHeader.indexOf(' ');
+      let encodedString = authHeader.slice(findSpace + 1);
+      let base64buffer = new Buffer.from(encodedString, 'base64');
+      let decodedString = base64buffer.toString();
+      let decodedArray = decodedString.split(':');
+
+      if(authenticationObject.hasOwnProperty(decodedArray[0])){
+        if(authenticationObject[decodedArray[0]] === decodedArray[1]){
+          console.log('password correct!');
+        } else {
+          res.writeHead(401, { 'WWW-Authenticate': 'Basic realm="Secure Area"' });
+          res.end(`<html><body>Invalid Authentication Credentials</body></html>`);
+          return;
+        }
+      } else {
+          res.writeHead(401, { 'WWW-Authenticate': 'Basic realm="Secure Area"' });
+          res.end(`<html><body>Invalid Authentication Credentials</body></html>`);
+          return;
+      }
+    }
+  }
+
   if (req.method === 'POST') {
     if (req.url !== '/elements') {
       res.writeHead(400, { 'Content-Type': 'text/html' });
       res.end(`invalid request URL`);
+      return;
     }
 
     let body = '';
     req.on('data', (chunk) => {
-      body += chunk.toString(); // convert Buffer to string
+      body += chunk.toString();
       let bodyObject = qs.decode(body);
       let bodyKeys = Object.keys(bodyObject);
-      let bodyValues = Object.values(bodyObject);
 
       if (
-        bodyKeys[0] === formData[0] &&
-        bodyKeys[1] === formData[1] &&
-        bodyKeys[2] === formData[2] &&
-        bodyKeys[3] === formData[3]
+        bodyKeys.indexOf('elementName') !== -1 &&
+        bodyKeys.indexOf('elementSymbol') !== -1 &&
+        bodyKeys.indexOf('elementAtomicNumber') !== -1 &&
+        bodyKeys.indexOf('elementDescription') !== -1
       ) {
-        elementNameReceived = bodyValues[0];
-        elementSymbolReceived = bodyValues[1];
-        elementAtomicNumberReceived = bodyValues[2];
-        elementDescriptionReceived = bodyValues[3];
+        elementNameReceived = bodyObject.elementName;
+        elementSymbolReceived = bodyObject.elementSymbol;
+        elementAtomicNumberReceived = bodyObject.elementAtomicNumber;
+        elementDescriptionReceived = bodyObject.elementDescription;
         fileName = elementNameReceived.toLowerCase();
 
         let elementTemplate = `<!DOCTYPE html>
@@ -151,18 +184,17 @@ const server = http.createServer((req, res) => {
 
           let bodyObject = qs.decode(body);
           let bodyKeys = Object.keys(bodyObject);
-          let bodyValues = Object.values(bodyObject);
 
           if (
-            bodyKeys[0] === formData[0] &&
-            bodyKeys[1] === formData[1] &&
-            bodyKeys[2] === formData[2] &&
-            bodyKeys[3] === formData[3]
+            bodyKeys.indexOf('elementName') !== -1 &&
+            bodyKeys.indexOf('elementSymbol') !== -1 &&
+            bodyKeys.indexOf('elementAtomicNumber') !== -1 &&
+            bodyKeys.indexOf('elementDescription') !== -1
           ) {
-            elementNameReceived = bodyValues[0];
-            elementSymbolReceived = bodyValues[1];
-            elementAtomicNumberReceived = bodyValues[2];
-            elementDescriptionReceived = bodyValues[3];
+            elementNameReceived = bodyObject.elementName;
+            elementSymbolReceived = bodyObject.elementSymbol;
+            elementAtomicNumberReceived = bodyObject.elementAtomicNumber;
+            elementDescriptionReceived = bodyObject.elementDescription;
             fileName = elementNameReceived.toLowerCase();
 
             let elementTemplate = `<!DOCTYPE html>
@@ -204,7 +236,6 @@ const server = http.createServer((req, res) => {
 
       fs.readdir('./public/', (err, files) => {
         files.forEach((file) => {
-          console.log(file);
           let fileTitle = file.charAt(0).toUpperCase() + file.slice(1);
           if (!existingFiles.includes(file)) {
             counter++;
@@ -214,7 +245,6 @@ const server = http.createServer((req, res) => {
     </li>`
           
           }
-          console.log(listOfFiles);
 
           let updateHTML = `<!DOCTYPE html>
 <html lang="en">
