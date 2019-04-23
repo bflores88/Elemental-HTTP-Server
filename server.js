@@ -6,7 +6,7 @@ const qs = require('querystring');
 
 let authenticationObject = {
   something: 'imadethisup',
-}
+};
 
 let existingFiles = ['css', '404.html', 'index.html', '.keep'];
 
@@ -36,8 +36,8 @@ const server = http.createServer((req, res) => {
     });
   }
 
-  if(req.method === 'POST' || req.method === 'PUT' || req.method === 'DELETE'){
-    if(req.headers.authorization === undefined){
+  if (req.method === 'POST' || req.method === 'PUT' || req.method === 'DELETE') {
+    if (req.headers.authorization === undefined) {
       res.writeHead(401, { 'WWW-Authenticate': 'Basic realm="Secure Area"' });
       res.end(`<html><body>Not Authorized</body></html>`);
       return;
@@ -49,8 +49,8 @@ const server = http.createServer((req, res) => {
       let decodedString = base64buffer.toString();
       let decodedArray = decodedString.split(':');
 
-      if(authenticationObject.hasOwnProperty(decodedArray[0])){
-        if(authenticationObject[decodedArray[0]] === decodedArray[1]){
+      if (authenticationObject.hasOwnProperty(decodedArray[0])) {
+        if (authenticationObject[decodedArray[0]] === decodedArray[1]) {
           console.log('password correct!');
         } else {
           res.writeHead(401, { 'WWW-Authenticate': 'Basic realm="Secure Area"' });
@@ -58,9 +58,9 @@ const server = http.createServer((req, res) => {
           return;
         }
       } else {
-          res.writeHead(401, { 'WWW-Authenticate': 'Basic realm="Secure Area"' });
-          res.end(`<html><body>Invalid Authentication Credentials</body></html>`);
-          return;
+        res.writeHead(401, { 'WWW-Authenticate': 'Basic realm="Secure Area"' });
+        res.end(`<html><body>Invalid Authentication Credentials</body></html>`);
+        return;
       }
     }
   }
@@ -242,8 +242,7 @@ const server = http.createServer((req, res) => {
             listOfFiles += `
     <li>
       <a href="/${file}.html">${fileTitle}</a>
-    </li>`
-          
+    </li>`;
           }
 
           let updateHTML = `<!DOCTYPE html>
@@ -262,15 +261,15 @@ const server = http.createServer((req, res) => {
 </body>
 </html>`;
 
-      let indexWriteStream = fs.createWriteStream('./public/index.html');
-      indexWriteStream.write(updateHTML);
+          let indexWriteStream = fs.createWriteStream('./public/index.html');
+          indexWriteStream.write(updateHTML);
 
-      indexWriteStream.on('finish', () => {
-        console.log('updated /index.html file');
-      });
+          indexWriteStream.on('finish', () => {
+            console.log('updated /index.html file');
+          });
 
-      res.writeHead(200, { 'Content-Type': 'application/json' });
-      res.end(`{ "success" : true }`);
+          res.writeHead(200, { 'Content-Type': 'application/json' });
+          res.end(`{ "success" : true }`);
 
           if (err) {
             res.send('[empty]');
@@ -278,8 +277,6 @@ const server = http.createServer((req, res) => {
           }
         });
       });
-
-
     } else {
       res.writeHead(500, { 'Content-Type': 'application/json' });
       res.end(`{ "error" : "resource ${req.url} does not exist }`);
