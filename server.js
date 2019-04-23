@@ -156,6 +156,8 @@ const server = http.createServer((req, res) => {
             indexWriteStream.write(updateHTML);
 
             indexWriteStream.on('finish', () => {
+              res.writeHead(200, { 'Content-Type': 'application/JSON' });
+              res.end('{ "success" : true }');
               console.log('wrote all data to file');
             });
           });
@@ -223,6 +225,8 @@ const server = http.createServer((req, res) => {
             fs.writeFile(`./public/${fileName}.html`, elementTemplate, (err) => {
               if (err) throw err;
               console.log('The file has been saved!');
+
+              
               res.writeHead(200, { 'Content-Type': 'application/json' });
               res.end('{ "success" : true }');
             });
@@ -256,7 +260,7 @@ const server = http.createServer((req, res) => {
             counter++;
             listOfFiles += `
     <li>
-      <a href="/${file}.html">${fileTitle}</a>
+      <a href="/${file}">${fileTitle}</a>
     </li>`;
           }
 
@@ -276,15 +280,13 @@ const server = http.createServer((req, res) => {
 </body>
 </html>`;
 
-          let indexWriteStream = fs.createWriteStream('./public/index.html');
-          indexWriteStream.write(updateHTML);
+          fs.writeFile('./public/index.html', updateHTML, (err) => {
+            if (err) throw err;
 
-          indexWriteStream.on('finish', () => {
+            res.writeHead(200, { 'Content-Type': 'application/json' });
+            res.end(`{ "success" : true }`);
             console.log('updated /index.html file');
           });
-
-          res.writeHead(200, { 'Content-Type': 'application/json' });
-          res.end(`{ "success" : true }`);
 
           if (err) {
             res.send('[empty]');
@@ -297,7 +299,6 @@ const server = http.createServer((req, res) => {
       res.end(`{ "error" : "resource ${req.url} does not exist }`);
     }
   }
-  //don't write below this line
 });
 
 server.on('clientError', (err, socket) => {
